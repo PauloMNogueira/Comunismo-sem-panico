@@ -108,17 +108,21 @@ body { margin: 0; }
 
 .scroll-hint {
   position: fixed; z-index: 50; left: 50%; transform: translateX(-50%);
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  display: grid; justify-items: center; gap: 2px; padding: 8px 16px 10px; border-radius: 999px;
-  background: rgba(12, 7, 8, .72); color: var(--blood); pointer-events: none;
-  transition: opacity .5s;
+  bottom: calc(5vh + env(safe-area-inset-bottom, 0px));
+  display: grid; justify-items: center; gap: 2px; padding: 8px 14px;
+  background: none; border: 0; font: inherit; cursor: pointer; color: var(--blood);
+  transition: opacity .4s; -webkit-tap-highlight-color: transparent;
 }
-.scroll-hint span { font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--paper); margin-bottom: 4px; }
+.scroll-hint:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.scroll-hint span { font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--smoke); margin-bottom: 6px; }
+.scroll-hint.on-red { color: var(--paper); }
+.scroll-hint.on-red span { color: var(--paper); }
+.scroll-hint.on-grey span { color: var(--soot); }
 .scroll-hint svg { width: 28px; height: 14px; animation: chev 1.6s ease-in-out infinite; }
 .scroll-hint svg:nth-of-type(2) { animation-delay: .2s; }
 .scroll-hint svg:nth-of-type(3) { animation-delay: .4s; }
 @keyframes chev { 0%,100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(4px); } }
-.hidden-hint { opacity: 0; }
+.hidden-hint { opacity: 0; pointer-events: none; }
 
 /* ---------- CENA LONDRES: vermelho → cinza → chaminé → cidade ---------- */
 .cena1 { position: relative; height: 1750vh; }
@@ -439,12 +443,12 @@ body { margin: 0; }
     </div>
   </section>
 </main>
-<div class="scroll-hint hidden-hint" id="hint" aria-hidden="true">
+<button type="button" class="scroll-hint" id="hint" aria-label="Avançar para a próxima cena">
         <span>role</span>
         <svg viewBox="0 0 28 14"><path d="M3 3 L14 11 L25 3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
         <svg viewBox="0 0 28 14"><path d="M3 3 L14 11 L25 3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
         <svg viewBox="0 0 28 14"><path d="M3 3 L14 11 L25 3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-      </div>
+      </button>
 
 <script>
 /* Cena Londres: gravura em vetor gerada por código (linhas finas e hachuras, como jornal do século 19) */
@@ -858,19 +862,61 @@ body { margin: 0; }
 </script>
 
 <script>
-/* Aviso "role": aparece quando a pessoa fica 1 segundo parada e ainda há o que rolar */
+/* Botão "role": sempre visível. Clicou, a página rola sozinha até o fim da próxima animação
+   e o botão volta. Quem preferir pode continuar rolando normalmente. */
 (() => {
   const hint = document.getElementById('hint');
-  let t;
-  const atEnd = () => scrollY + innerHeight >= document.documentElement.scrollHeight - 4;
-  const arm = () => {
-    hint.classList.add('hidden-hint');
-    clearTimeout(t);
-    t = setTimeout(() => { if (!atEnd()) hint.classList.remove('hidden-hint'); }, 1000);
-  };
-  addEventListener('scroll', arm, { passive: true });
-  addEventListener('resize', arm);
-  arm();
+  const $ = id => document.getElementById(id);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Paradas: [seção, fração do scroll da seção] onde cada animação termina
+  const STOPS = [
+    ['cena0', .26], ['cena0', .6], ['cena0', .88],
+    ['cena1', .313], ['cena1', .637], ['cena1', .79], ['cena1', .835],
+    ['cena2', .075], ['cena2', .44], ['cena2', .7], ['cena2', .875], ['cena2', .95],
+    ['cena3', 1]
+  ];
+  const sec = id => { const el = $(id); return el ? [el.offsetTop, el.offsetHeight - innerHeight] : null; };
+  const stopY = ([id, f]) => { const r = sec(id); return r ? Math.round(r[0] + r[1] * f) : null; };
+  const maxY = () => document.documentElement.scrollHeight - innerHeight;
+
+  // cor do botão conforme o fundo
+  function tone() {
+    const y = scrollY, c0 = sec('cena0'), c1 = sec('cena1');
+    let t = '';
+    if (c0 && y < c0[0] + c0[1] + 1) t = y > c0[0] + c0[1] * .3 ? 'on-red' : '';
+    else if (c1 && y < c1[0] + c1[1] * .05) t = 'on-red';
+    else t = 'on-grey';
+    hint.classList.toggle('on-red', t === 'on-red');
+    hint.classList.toggle('on-grey', t === 'on-grey');
+  }
+
+  let playing = false, raf = 0;
+  const show = () => hint.classList.toggle('hidden-hint', playing || scrollY >= maxY() - 4);
+  const stop = () => { if (!playing) return; playing = false; cancelAnimationFrame(raf); show(); };
+
+  hint.addEventListener('click', () => {
+    const y0 = scrollY;
+    const target = STOPS.map(stopY).filter(v => v != null && v > y0 + 8).sort((a, b) => a - b)[0] ?? maxY();
+    const dist = target - y0;
+    if (dist <= 0) return;
+    if (reduce) { scrollTo({ top: target, behavior: 'instant' }); return; }
+    // velocidade de leitura: cerca de 0,9 s por altura de tela
+    const dur = Math.max(1200, dist / innerHeight * 900), t0 = performance.now();
+    const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    playing = true; show();
+    const step = now => {
+      if (!playing) return;
+      const t = Math.min(1, (now - t0) / dur);
+      scrollTo({ top: y0 + dist * ease(t), behavior: 'instant' });
+      if (t < 1) raf = requestAnimationFrame(step); else { playing = false; show(); }
+    };
+    raf = requestAnimationFrame(step);
+  });
+  // se a pessoa mexer, ela assume o controle
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(ev => addEventListener(ev, e => { if (e.target !== hint && !hint.contains(e.target)) stop(); }, { passive: true }));
+  addEventListener('scroll', () => { tone(); show(); }, { passive: true });
+  addEventListener('resize', () => { tone(); show(); });
+  tone(); show();
 })();
 </script>
 </html>
