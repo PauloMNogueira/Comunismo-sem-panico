@@ -282,12 +282,7 @@ body { font-family: var(--font-body); font-size: 16px; overflow-x: hidden; }
             <path d="M90 74 Q101 66 112 80 Q100 90 90 74 Z M150 74 Q139 66 128 80 Q140 90 150 74 Z" fill="#1e1b1c"/>
             <path d="M106 98 Q120 88 134 98 Q138 120 120 128 Q102 120 106 98 Z" fill="#1e1b1c"/>
             <path d="M110 104 Q120 98 130 104" stroke="#5a0611" stroke-width="1.2" fill="none"/>
-            <g transform="translate(120 162)" fill="var(--paper)" stroke="#3d040b" stroke-width="1.6" stroke-linejoin="round">
-              <path d="M-10 -24 A24 24 0 1 0 22 10 A19 19 0 1 1 -10 -24 Z"/>
-              <path d="M-14 16 L-24 26 L-19 31 L-9 21 Z"/>
-              <path d="M-15 20 L11 -6 L16 -1 L-10 25 Z"/>
-              <path d="M2 -20 L19 -3 L25 -9 L8 -26 Z"/>
-            </g>
+            <image href="foice-martelo.png" x="93" y="135" width="54" height="54.5" preserveAspectRatio="xMidYMid meet"/>
           </svg>
         </div>
       </div>
@@ -296,15 +291,8 @@ body { font-family: var(--font-body); font-size: 16px; overflow-x: hidden; }
 
       <div class="phrases" id="phrases">
         <p>Você é contra o comunismo?</p>
-        <p>Ótimo.</p>
         <p>Mas você sabe o que é?</p>
-        <p class="small">Pra ser contra com fundamento, primeiro você precisa saber o que está rejeitando. São 5 minutos.</p>
       </div>
-
-      <svg class="peek-eye" id="peekEye" viewBox="0 0 80 60" aria-hidden="true">
-        <path d="M14 14 L44 28" stroke="var(--ink)" stroke-width="7" stroke-linecap="round"/>
-        <g class="lid"><ellipse cx="40" cy="42" rx="9" ry="12" fill="var(--ink)"/></g>
-      </svg>
 
       <div class="scroll-hint" id="hint" aria-hidden="true">
         <span>role</span>
@@ -877,7 +865,6 @@ body { font-family: var(--font-body); font-size: 16px; overflow-x: hidden; }
   const quote = document.getElementById('quote');
   const red = document.getElementById('redFill');
   const hint = document.getElementById('hint');
-  const eye = document.getElementById('peekEye');
   const phrases = [...document.querySelectorAll('#phrases p')];
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -886,7 +873,7 @@ body { font-family: var(--font-body); font-size: 16px; overflow-x: hidden; }
   const win = (p, a, b, f = .015) => Math.min(range(p, a, a + f), 1 - range(p, b - f, b)); // aparece e some
 
   // Mapa da cena (percentual do scroll da seção)
-  const STEPS = [[.47, .59], [.59, .71], [.71, .83], [.83, 1.01]];
+  const STEPS = [[.47, .74], [.74, 1.01]];
 
   function render() {
     const total = sec.offsetHeight - innerHeight;
@@ -906,7 +893,6 @@ body { font-family: var(--font-body); font-size: 16px; overflow-x: hidden; }
     red.style.opacity = range(p, .38, .43).toFixed(3);
 
     phrases.forEach((el, i) => { el.style.opacity = win(p, STEPS[i][0], STEPS[i][1], .025).toFixed(3); });
-    eye.classList.toggle('on', p > .92);
   }
 
   let ticking = false;
